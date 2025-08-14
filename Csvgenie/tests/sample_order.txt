@@ -1,0 +1,15 @@
+Grocery Order
+
+Need to buy:
+- 2 bags of organic apples
+- 1 gallon whole milk
+- 3 cans of black beans
+- 1 loaf of whole wheat bread
+- 2 pounds of ground beef
+- 1 package of frozen peas
+- 4 bananas
+- 1 jar of peanut butter
+- 1 dozen eggs
+- 1 head of lettuce
+
+Please make sure everything is fresh and organic when possible.
