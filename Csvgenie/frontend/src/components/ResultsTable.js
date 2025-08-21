@@ -125,31 +125,16 @@ const ResultsTable = () => {
     return nameMatch || codeMatch;
   }).slice(0, 10); // Limit to 10 results
 
-  // Debug logging for search
+  // Debug logging for search (only when search term changes)
   useEffect(() => {
-    console.log('=== SEARCH DEBUG ===');
-    console.log('Search term:', `"${searchTerm}"`);
-    console.log('Search term length:', searchTerm.length);
-    console.log('Catalog items total:', catalogItems.length);
-    console.log('Filtered items:', filteredCatalogItems.length);
-    console.log('Show dropdown state:', showSearchDropdown);
-    
-    if (catalogItems.length > 0) {
-      console.log('Sample catalog items:', catalogItems.slice(0, 3).map(item => ({
-        name: item.item_name,
-        code: item.item_code,
-        category: item.category
-      })));
+    if (searchTerm.trim()) {
+      console.log('=== SEARCH DEBUG ===');
+      console.log('Search term:', `"${searchTerm}"`);
+      console.log('Search term length:', searchTerm.length);
+      console.log('Catalog items total:', catalogItems.length);
+      console.log('Filtered items:', filteredCatalogItems.length);
     }
-    
-    if (filteredCatalogItems.length > 0) {
-      console.log('Sample filtered items:', filteredCatalogItems.slice(0, 3).map(item => ({
-        name: item.item_name,
-        code: item.item_code,
-        category: item.category
-      })));
-    }
-  }, [searchTerm, filteredCatalogItems, showSearchDropdown, catalogItems]);
+  }, [searchTerm, catalogItems.length]);
 
   // Handle quantity editing
   const handleQuantityChange = (index, newQuantity) => {
