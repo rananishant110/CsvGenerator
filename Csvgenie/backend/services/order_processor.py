@@ -38,8 +38,9 @@ class OrderProcessor:
         """Initialize the Hugging Face sentence transformer model"""
         try:
             logger.info("Loading sentence transformer model...")
-            self.model = SentenceTransformer('all-MiniLM-L6-v2')
-            logger.info("✅ Sentence transformer model loaded successfully")
+            from config import config
+            self.model = SentenceTransformer(config.MODEL_NAME)
+            logger.info(f"✅ Sentence transformer model loaded successfully: {config.MODEL_NAME}")
         except Exception as e:
             logger.error(f"❌ Error loading model: {e}")
             raise

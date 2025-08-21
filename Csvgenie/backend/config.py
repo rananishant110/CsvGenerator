@@ -16,23 +16,26 @@ class Config:
         "http://localhost:3000,http://127.0.0.1:3000"
     ).split(",")
     
-    # ML Model Configuration
-    MODEL_NAME: str = os.getenv("MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")
+    # ML Model Configuration - Using lightweight model for Render free tier
+    MODEL_NAME: str = os.getenv("MODEL_NAME", "sentence-transformers/paraphrase-MiniLM-L3-v2")
     
-    # Alternative models for better accuracy (uncomment to use):
-    # MODEL_NAME: str = os.getenv("MODEL_NAME", "sentence-transformers/all-mpnet-base-v2")  # Better accuracy, slower
-    # MODEL_NAME: str = os.getenv("MODEL_NAME", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")  # Multilingual
-    # MODEL_NAME: str = os.getenv("MODEL_NAME", "sentence-transformers/all-distilroberta-v1")  # Good balance
+    # Alternative models (uncomment for better accuracy if you upgrade Render):
+    # MODEL_NAME: str = os.getenv("MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")  # Better accuracy, more memory
+    # MODEL_NAME: str = os.getenv("MODEL_NAME", "sentence-transformers/all-mpnet-base-v2")  # Best accuracy, most memory
     
     # Improved confidence thresholds
     CONFIDENCE_THRESHOLD_HIGH: float = float(os.getenv("CONFIDENCE_THRESHOLD_HIGH", "0.75"))
     CONFIDENCE_THRESHOLD_MEDIUM: float = float(os.getenv("CONFIDENCE_THRESHOLD_MEDIUM", "0.55"))
     CONFIDENCE_THRESHOLD_LOW: float = float(os.getenv("CONFIDENCE_THRESHOLD_LOW", "0.35"))
     
-    # Enhanced matching settings
-    MIN_SIMILARITY_THRESHOLD: float = float(os.getenv("MIN_SIMILARITY_THRESHOLD", "0.25"))
-    MAX_CANDIDATES_PER_ITEM: int = int(os.getenv("MAX_CANDIDATES_PER_ITEM", "5"))
+    # Enhanced matching settings - Optimized for Render free tier
+    MIN_SIMILARITY_THRESHOLD: float = float(os.getenv("MIN_SIMILARITY_THRESHOLD", "0.30"))
+    MAX_CANDIDATES_PER_ITEM: int = int(os.getenv("MAX_CANDIDATES_PER_ITEM", "3"))
     USE_FUZZY_MATCHING: bool = os.getenv("USE_FUZZY_MATCHING", "true").lower() == "true"
+    
+    # Memory optimization for Render free tier
+    BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "50"))  # Process items in smaller batches
+    ENABLE_EMBEDDINGS_CACHE: bool = os.getenv("ENABLE_EMBEDDINGS_CACHE", "true").lower() == "true"
     
     # File Processing
     MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
