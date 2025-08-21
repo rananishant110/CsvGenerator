@@ -13,16 +13,11 @@ const ResultsTable = () => {
 
   // Load catalog items for search functionality
   useEffect(() => {
-    console.log('🚀 Component mounted, starting catalog load...');
     const loadCatalog = async () => {
       try {
-        console.log('🔄 Loading catalog summary...');
         const summary = await getCatalogInfo();
-        console.log('📊 Catalog summary loaded:', summary);
         
         if (summary && summary.summary && summary.summary.total_items > 0) {
-          console.log('✅ Catalog summary loaded successfully:', summary.summary.total_items, 'items');
-          
           // Create catalog items from the summary data
           const items = [];
           if (summary.summary.item_codes && summary.summary.item_names) {
@@ -35,27 +30,21 @@ const ResultsTable = () => {
             }
           }
           
-          console.log('📝 Created catalog items:', items.length);
-          console.log('📝 First item sample:', items[0]);
           setCatalogItems(items);
           
         } else {
-          console.warn('⚠️ Catalog summary empty, trying full catalog...');
           // Fallback to full catalog
           try {
             const catalog = await getFullCatalog();
-            console.log('📦 Full catalog response:', catalog);
             if (catalog && catalog.items && catalog.items.length > 0) {
-              console.log('✅ Full catalog loaded successfully:', catalog.items.length, 'items');
               setCatalogItems(catalog.items);
             }
           } catch (fullCatalogError) {
-            console.error('❌ Full catalog also failed:', fullCatalogError);
+            console.error('Full catalog also failed:', fullCatalogError);
           }
         }
       } catch (error) {
-        console.error('❌ Error loading catalog summary:', error);
-        console.error('Error details:', error.response?.data || error.message);
+        console.error('Error loading catalog summary:', error);
         
         // Try full catalog as last resort
         try {
@@ -64,7 +53,7 @@ const ResultsTable = () => {
             setCatalogItems(catalog.items);
           }
         } catch (fullCatalogError) {
-          console.error('❌ All catalog loading methods failed:', fullCatalogError);
+          console.error('All catalog loading methods failed:', fullCatalogError);
         }
       }
     };
@@ -91,7 +80,6 @@ const ResultsTable = () => {
   // Initialize editable results when results change
   useEffect(() => {
     if (results && results.mapped_items) {
-      console.log('Setting editable results:', results.mapped_items.length);
       setEditableResults(results.mapped_items.map(item => ({
         ...item,
         isEditing: false,
@@ -118,9 +106,7 @@ const ResultsTable = () => {
     const nameMatch = nameLower.includes(searchLower);
     const codeMatch = codeLower.includes(searchLower);
     
-    if (nameMatch || codeMatch) {
-      console.log('✅ Match found:', item.item_name, 'for search:', searchTerm);
-    }
+
     
     return nameMatch || codeMatch;
   }).slice(0, 10); // Limit to 10 results
