@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOrder } from '../context/OrderContext';
 import { downloadCSV } from '../utils/csvUtils';
 import { getFullCatalog, getCatalogInfo } from '../utils/api';
@@ -9,7 +9,7 @@ const ResultsTable = () => {
   const [catalogItems, setCatalogItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState({});
-  const dropdownRef = useRef(null);
+  // const dropdownRef = useRef(null); // Unused for now
 
   // Load catalog items for search functionality
   useEffect(() => {

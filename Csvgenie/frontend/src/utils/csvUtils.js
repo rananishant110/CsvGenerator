@@ -44,7 +44,7 @@ export const downloadCSV = (results) => {
  * @returns {string} CSV content as a string
  */
 const generateCSVContent = (results) => {
-  const { mapped_items, unmapped_items, total_items, processing_time } = results;
+  const { mapped_items, unmapped_items } = results;
 
   // CSV headers - Only the 3 essential fields
   const headers = [
