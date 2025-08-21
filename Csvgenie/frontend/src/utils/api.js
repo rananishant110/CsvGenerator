@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 seconds
+  timeout: 300000, // 5 minutes for file processing
   headers: {
     'Content-Type': 'application/json',
   },
@@ -61,6 +61,7 @@ export const processOrderFile = async (formData, onProgress) => {
     }, 200);
 
     const response = await api.post('/upload-order-file', formData, {
+      timeout: 600000, // 10 minutes for file processing
       headers: {
         'Content-Type': 'multipart/form-data',
       },
