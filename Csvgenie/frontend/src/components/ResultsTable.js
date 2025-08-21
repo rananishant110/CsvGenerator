@@ -125,16 +125,7 @@ const ResultsTable = () => {
     return nameMatch || codeMatch;
   }).slice(0, 10); // Limit to 10 results
 
-  // Debug logging for search (only when search term changes)
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      console.log('=== SEARCH DEBUG ===');
-      console.log('Search term:', `"${searchTerm}"`);
-      console.log('Search term length:', searchTerm.length);
-      console.log('Catalog items total:', catalogItems.length);
-      console.log('Filtered items:', filteredCatalogItems.length);
-    }
-  }, [searchTerm, catalogItems.length]);
+
 
   // Handle quantity editing
   const handleQuantityChange = (index, newQuantity) => {
