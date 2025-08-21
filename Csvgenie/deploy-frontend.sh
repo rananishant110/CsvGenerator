@@ -2,10 +2,10 @@
 
 echo "🚀 Deploying CSVGenie Frontend to Vercel..."
 
-# Check if git is initialized
-if [ ! -d ".git" ]; then
-    echo "❌ Error: This directory is not a git repository"
-    echo "Please run: git init && git add . && git commit -m 'Initial commit'"
+# Check if git is initialized (in parent directory)
+if [ ! -d "../.git" ]; then
+    echo "❌ Error: Git repository not found in parent directory"
+    echo "Please ensure you're in the Csvgenie folder within the CsvGenerator git repository"
     exit 1
 fi
 
