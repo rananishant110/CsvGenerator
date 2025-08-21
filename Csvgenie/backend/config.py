@@ -40,6 +40,7 @@ class Config:
     
     # Paths
     BASE_DIR: Path = Path(__file__).parent
+    CATALOG_DIR: Path = BASE_DIR / "catalog"
     TESTS_FOLDER: Path = BASE_DIR.parent / "tests"
     TEMP_DIR: Path = BASE_DIR / "temp"
     

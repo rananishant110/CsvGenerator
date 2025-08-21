@@ -16,7 +16,7 @@ class CatalogService:
         self.catalog: List[CatalogItem] = []
         self.catalog_df: Optional[pd.DataFrame] = None
         self.is_loaded_flag = False
-        self.tests_folder = Path("../tests")  # Relative to backend folder
+        self.tests_folder = Path("catalog")  # Use local catalog directory
         self.catalog_file = Path("temp/catalog.json")  # Persistent catalog storage
         
     def load_catalog(self) -> None:
