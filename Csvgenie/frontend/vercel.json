@@ -28,6 +28,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "@csvgenie_api_url"
+    "REACT_APP_API_URL": "https://csvgenie-backend.onrender.com"
   }
 }
