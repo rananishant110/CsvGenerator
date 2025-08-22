@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useOrder } from '../context/OrderContext';
 import { processOrderFile, getFullCatalog } from '../utils/api';
 
@@ -178,10 +178,10 @@ const FileUpload = () => {
     if (inputMode === 'manual' && catalogItems.length === 0) {
       loadCatalogItems();
     }
-  }, [inputMode]);
+  }, [inputMode, catalogItems.length, loadCatalogItems]);
 
   // Load catalog items from the backend
-  const loadCatalogItems = async () => {
+  const loadCatalogItems = useCallback(async () => {
     try {
       const catalog = await getFullCatalog();
       setCatalogItems(catalog);
@@ -191,10 +191,10 @@ const FileUpload = () => {
       // Set empty array to prevent errors
       setCatalogItems([]);
     }
-  };
+  }, []);
 
   // Filter catalog items for search
-  const filterCatalogItems = (searchTerm) => {
+  const filterCatalogItems = useCallback((searchTerm) => {
     if (!searchTerm.trim()) return [];
     
     const searchLower = searchTerm.toLowerCase();
@@ -203,7 +203,7 @@ const FileUpload = () => {
       (item.item_code && item.item_code.toLowerCase().includes(searchLower)) ||
       (item.category && item.category.toLowerCase().includes(searchLower))
     ).slice(0, 10);
-  };
+  }, [catalogItems]);
 
   // Handle catalog item selection
   const handleCatalogItemSelect = (catalogItem) => {
