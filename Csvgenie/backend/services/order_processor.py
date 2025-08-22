@@ -169,12 +169,28 @@ class OrderProcessor:
             unmapped_items = []
             
             for item_text, quantity in parsed_items:
+                if quantity == 0:
+                    # This is a weight specification or complex format that couldn't be parsed
+                    unmapped_items.append({
+                        'original_text': item_text,
+                        'quantity': 0,
+                        'original_line': item_text,
+                        'reason': 'Weight specification or complex format'
+                    })
+                    continue
+                
                 mapped_item = self._map_item_to_catalog(item_text, quantity)
                 
                 if mapped_item and mapped_item.confidence != MatchConfidence.UNMATCHED:
                     mapped_items.append(mapped_item)
                 else:
-                    unmapped_items.append(item_text)
+                    # Store unmapped items with both original text and quantity
+                    unmapped_items.append({
+                        'original_text': item_text,
+                        'quantity': quantity,
+                        'original_line': f"{quantity} {item_text}" if quantity > 0 else item_text,
+                        'reason': 'No catalog match found'
+                    })
             
             # Generate CSV file
             csv_filename = self._generate_csv(mapped_items)
@@ -213,31 +229,50 @@ class OrderProcessor:
             # Extract quantity and item description
             quantity, item_text = self._extract_quantity_and_item(line)
             
-            if item_text and quantity > 0:
-                parsed_items.append((item_text, quantity))
+            if item_text:
+                if quantity > 0:
+                    # Valid item with quantity
+                    parsed_items.append((item_text, quantity))
+                else:
+                    # Weight specification or complex format - add to unmapped items
+                    logger.debug(f"Adding weight specification to unmapped: '{line}'")
+                    parsed_items.append((line, 0))  # 0 quantity marks it as unmapped
         
         return parsed_items
     
     def _extract_quantity_and_item(self, text: str) -> Tuple[float, str]:
-        """Extract quantity and item description from text"""
+        """Extract quantity and item description from text with smart parsing"""
         # Clean the text first
         text = text.strip()
         
-        # Common quantity patterns for grocery items
+        # Smart quantity patterns for complex grocery orders
         quantity_patterns = [
-            # Pattern: "Item - Quantity" (most common in your file)
-            r'^(.+?)\s*-\s*(\d+(?:\.\d+)?)\s*(lbs?|kg|g|oz|ml|l|qt|gal|pcs?|pieces?|units?|bags?|bottles?|cans?|packets?|boxes?|case|box)',
+            # Pattern: "Item - Final Quantity" (e.g., "Urad Dhal 4*10lb- 1 case")
+            r'^(.+?)\s+(\d+)\s*\*\s*\d+(?:\.\d+)?\s*(?:lbs?|kg|g|oz|ml|l|qt|gal)\s*-\s*(\d+(?:\.\d+)?)\s*(case|box|packet|pkt|pcs?|pieces?|units?|bags?|bottles?|cans?|packets?|boxes?)',
             
-            # Pattern: "Item Quantity units"
-            r'^(.+?)\s+(\d+(?:\.\d+)?)\s*(lbs?|kg|g|oz|ml|l|qt|gal|pcs?|pieces?|units?|bags?|bottles?|cans?|packets?|boxes?|case|box)',
+            # Pattern: "Item Weight * Final Quantity" (e.g., "Cardamom green 5lb *3pkts" or "Cinnamon 5lb *3")
+            r'^(.+?)\s+(\d+(?:\.\d+)?)\s*(lbs?|kg|g|oz|ml|l|qt|gal)\s*\*\s*(\d+(?:\.\d+)?)(?:\s*(pkts?|packets?|pcs?|pieces?|units?|bags?|bottles?|cans?|boxes?|case))?$',
             
-            # Pattern: "Quantity Item"
-            r'^(\d+(?:\.\d+)?)\s*(lbs?|kg|g|oz|ml|l|qt|gal|pcs?|pieces?|units?|bags?|bottles?|cans?|packets?|boxes?|case|box)\s+(.+)',
+            # Pattern: "Item - Quantity units" (e.g., "Item - 1 case")
+            r'^(.+?)\s*-\s*(\d+(?:\.\d+)?)\s*(case|box|packet|pkt|pcs?|pieces?|units?|bags?|bottles?|cans?|packets?|boxes?)',
             
-            # Pattern: "Item Quantity" (fallback)
+            # Pattern: "Item Quantity units" (e.g., "Item 1 case")
+            r'^(.+?)\s+(\d+(?:\.\d+)?)\s*(case|box|packet|pkt|pcs?|pieces?|units?|bags?|bottles?|cans?|packets?|boxes?)',
+            
+            # Pattern: "Quantity units Item" (e.g., "1 case Item")
+            r'^(\d+(?:\.\d+)?)\s*(case|box|packet|pkt|pcs?|pieces?|units?|bags?|bottles?|cans?|packets?|boxes?)\s+(.+)',
+            
+            # Pattern: "Item Weight" (e.g., "150lbs" - should not be treated as quantity)
+            # Only match if there's no * or other quantity indicators
+            r'^(.+?)\s+(\d+(?:\.\d+)?)\s*(lbs?|kg|g|oz|ml|l|qt|gal)$',
+            
+            # Pattern: "Weight Item" (e.g., "150lbs Item")
+            r'^(\d+(?:\.\d+)?)\s*(lbs?|kg|g|oz|ml|l|qt|gal)\s+(.+)',
+            
+            # Pattern: "Item Quantity" (fallback for simple cases)
             r'^(.+?)\s+(\d+(?:\.\d+)?)',
             
-            # Pattern: "Quantity Item" (fallback)
+            # Pattern: "Quantity Item" (fallback for simple cases)
             r'^(\d+(?:\.\d+)?)\s+(.+)',
         ]
         
@@ -245,10 +280,48 @@ class OrderProcessor:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 try:
-                    if len(match.groups()) == 2:
-                        # Check if first group is quantity or item
-                        first_group = match.group(1).strip()
-                        second_group = match.group(2).strip()
+                    groups = match.groups()
+                    
+                    if len(groups) == 4:  # Complex pattern like "Item 4*10lb- 1 case"
+                        item_text = groups[0].strip()
+                        # Skip the weight multiplier (groups[1] and groups[2])
+                        quantity = float(groups[3])
+                        unit_type = groups[4].lower()
+                        
+                        # Clean up item text
+                        item_text = re.sub(r'^\s*[-–—]\s*', '', item_text)
+                        item_text = item_text.strip()
+                        
+                        if quantity > 0 and item_text and len(item_text) > 1:
+                            logger.debug(f"Complex parsed: '{item_text}' (Qty: {quantity} {unit_type}) from '{text}'")
+                            return quantity, item_text
+                            
+                    elif len(groups) >= 3:  # Pattern like "Item Weight * Quantity" (with optional unit type)
+                        item_text = groups[0].strip()
+                        weight = groups[1]
+                        weight_unit = groups[2].lower()
+                        quantity = float(groups[3])
+                        
+                        # Unit type is optional (e.g., "Cinnamon 5lb *3" has no explicit unit)
+                        unit_type = groups[4].lower() if len(groups) > 4 and groups[4] else "units"
+                        
+                        # Clean up item text
+                        item_text = re.sub(r'^\s*[-–—]\s*', '', item_text)
+                        item_text = item_text.strip()
+                        
+                        if quantity > 0 and item_text and len(item_text) > 1:
+                            logger.debug(f"Weight-based parsed: '{item_text}' (Qty: {quantity} {unit_type}) from '{text}'")
+                            return quantity, item_text
+                            
+                    elif len(groups) == 2:  # Simple patterns
+                        first_group = groups[0].strip()
+                        second_group = groups[1].strip()
+                        
+                        # Check if this is a weight-only pattern (should not be treated as quantity)
+                        if re.search(r'\b(lbs?|kg|g|oz|ml|l|qt|gal)\b', second_group, re.IGNORECASE):
+                            # This is a weight specification, not a quantity
+                            logger.debug(f"Weight specification detected: '{text}' - treating as unmapped")
+                            return 0, text  # Return 0 quantity to mark as unmapped
                         
                         # Try to parse first group as quantity
                         try:
@@ -262,19 +335,14 @@ class OrderProcessor:
                             except ValueError:
                                 # Neither is a number, skip this pattern
                                 continue
-                    else:
-                        # Handle 3+ groups if needed
-                        quantity = float(match.group(1))
-                        item_text = match.group(2).strip()
-                    
-                    # Clean up item text
-                    item_text = re.sub(r'^\s*[-–—]\s*', '', item_text)  # Remove leading dashes
-                    item_text = item_text.strip()
-                    
-                    # Validate we have both quantity and item
-                    if quantity > 0 and item_text and len(item_text) > 1:
-                        logger.debug(f"Parsed: '{item_text}' (Qty: {quantity}) from '{text}'")
-                        return quantity, item_text
+                        
+                        # Clean up item text
+                        item_text = re.sub(r'^\s*[-–—]\s*', '', item_text)
+                        item_text = item_text.strip()
+                        
+                        if quantity > 0 and item_text and len(item_text) > 1:
+                            logger.debug(f"Simple parsed: '{item_text}' (Qty: {quantity}) from '{text}'")
+                            return quantity, item_text
                         
                 except (ValueError, IndexError) as e:
                     logger.debug(f"Pattern failed for '{text}': {e}")
@@ -287,16 +355,25 @@ class OrderProcessor:
         number_match = re.search(r'(\d+(?:\.\d+)?)', text)
         if number_match:
             try:
-                quantity = float(number_match.group(1))
+                potential_quantity = float(number_match.group(1))
                 # Remove the number and clean up
                 item_text = re.sub(r'\d+(?:\.\d+)?', '', text).strip()
-                item_text = re.sub(r'^\s*[-–—]\s*', '', item_text)  # Remove leading dashes
+                item_text = re.sub(r'^\s*[-–—]\s*', '', item_text)
+                
+                # Check if this looks like a weight specification
+                if re.search(r'\b(lbs?|kg|g|oz|ml|l|qt|gal)\b', text, re.IGNORECASE):
+                    logger.debug(f"Weight specification detected in fallback: '{text}' - treating as unmapped")
+                    return 0, text  # Return 0 quantity to mark as unmapped
                 
                 if item_text and len(item_text) > 1:
-                    logger.debug(f"Fallback parsed: '{item_text}' (Qty: {quantity}) from '{text}'")
-                    return quantity, item_text
+                    logger.debug(f"Fallback parsed: '{item_text}' (Qty: {potential_quantity}) from '{text}'")
+                    return potential_quantity, item_text
             except ValueError:
                 pass
+        
+        # If we can't parse anything, return 0 quantity to mark as unmapped
+        logger.debug(f"Could not parse quantity from: '{text}' - marking as unmapped")
+        return 0, text
         
         # Last resort: assume quantity 1 and use the whole text
         logger.warning(f"Using fallback for text: '{text}'")

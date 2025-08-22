@@ -59,6 +59,10 @@ const FileUpload = () => {
         dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress });
       });
 
+      // Debug logging for results
+      console.log('📁 FileUpload Debug - Results received:', results);
+      console.log('📁 FileUpload Debug - Unmapped items:', results.unmapped_items);
+      
       dispatch({ type: 'SET_RESULTS', payload: results });
       setSelectedFile(null);
       if (fileInputRef.current) {

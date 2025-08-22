@@ -8,6 +8,23 @@ class MatchConfidence(str, Enum):
     LOW = "low"
     UNMATCHED = "unmatched"
 
+class UnmappedItem(BaseModel):
+    """Represents an unmapped item from the order"""
+    original_text: str = Field(..., min_length=1, max_length=500, description="Original text from the order")
+    quantity: float = Field(..., ge=0, le=10000, description="Extracted quantity")
+    original_line: str = Field(..., min_length=1, max_length=1000, description="Full original line text")
+    reason: str = Field(..., description="Reason why item couldn't be mapped")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "original_text": "case ( cans) of pachranga achar",
+                "quantity": 1.0,
+                "original_line": "1 case (12 cans) of pachranga achar",
+                "reason": "No catalog match found"
+            }
+        }
+
 class MappedItem(BaseModel):
     """Represents a mapped item from the order"""
     original_text: str = Field(..., min_length=1, max_length=500, description="Original text from the order")
@@ -53,7 +70,7 @@ class CatalogItem(BaseModel):
 class ProcessedOrder(BaseModel):
     """Represents the processed order results"""
     mapped_items: List[MappedItem] = Field(..., description="Successfully mapped items")
-    unmapped_items: List[str] = Field(..., description="Items that couldn't be mapped")
+    unmapped_items: List[UnmappedItem] = Field(..., description="Items that couldn't be mapped")
     total_items: int = Field(..., ge=0, description="Total number of items processed")
     mapped_count: int = Field(..., ge=0, description="Number of successfully mapped items")
     unmapped_count: int = Field(..., ge=0, description="Number of unmapped items")
