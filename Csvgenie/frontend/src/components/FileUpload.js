@@ -224,7 +224,7 @@ const FileUpload = () => {
     } else {
       setFilteredCatalogItems([]);
     }
-  }, [newItem.name, catalogItems]);
+  }, [newItem.name, filterCatalogItems]);
 
   // Close catalog search when clicking outside
   useEffect(() => {
