@@ -90,26 +90,162 @@ const ResultsTable = () => {
     }
   }, [results]);
 
-  // Filter catalog items for search
-  const filteredCatalogItems = catalogItems.filter(item => {
-    if (!item || !item.item_name) {
-      console.log('❌ Invalid item:', item);
-      return false;
-    }
+  // Advanced search function with multiple strategies
+  const advancedSearch = (searchTerm, catalogItems) => {
+    if (!searchTerm.trim()) return [];
     
     const searchLower = searchTerm.toLowerCase().trim();
-    if (!searchLower) return false;
+    const searchWords = searchLower.split(/\s+/).filter(word => word.length > 0);
     
+    return catalogItems
+      .filter(item => {
+        if (!item || !item.item_name) return false;
+        
+        const nameLower = item.item_name.toLowerCase();
+        const codeLower = (item.item_code || '').toLowerCase();
+        const categoryLower = (item.category || '').toLowerCase();
+        
+        // Strategy 1: Exact substring matches (highest priority)
+        if (nameLower.includes(searchLower) || codeLower.includes(searchLower)) {
+          return true;
+        }
+        
+        // Strategy 2: All search words present (word order independent)
+        if (searchWords.length > 1) {
+          const allWordsPresent = searchWords.every(word => 
+            nameLower.includes(word) || codeLower.includes(word) || categoryLower.includes(word)
+          );
+          if (allWordsPresent) return true;
+        }
+        
+        // Strategy 3: Partial word matches (e.g., "ur" finds "URAD")
+        const partialMatches = searchWords.some(word => {
+          // Check if any word in the item name starts with the search word
+          const itemWords = nameLower.split(/\s+/);
+          return itemWords.some(itemWord => itemWord.startsWith(word));
+        });
+        if (partialMatches) return true;
+        
+        // Strategy 4: Acronym/abbreviation matching
+        const acronymMatch = searchWords.some(word => {
+          // Extract first letters of each word in item name
+          const itemAcronym = nameLower.split(/\s+/).map(w => w.charAt(0)).join('');
+          return itemAcronym.includes(word) || itemAcronym.startsWith(word);
+        });
+        if (acronymMatch) return true;
+        
+        // Strategy 5: Fuzzy matching for typos (using simple character similarity)
+        const fuzzyMatch = searchWords.some(searchWord => {
+          const itemWords = nameLower.split(/\s+/);
+          return itemWords.some(itemWord => {
+            // Calculate similarity score
+            const similarity = calculateSimilarity(searchWord, itemWord);
+            return similarity >= 0.7; // 70% similarity threshold
+          });
+        });
+        if (fuzzyMatch) return true;
+        
+        return false;
+      })
+      .map(item => {
+        // Calculate relevance score for ranking
+        const relevanceScore = calculateRelevanceScore(searchLower, item, searchWords);
+        return { ...item, relevanceScore };
+      })
+      .sort((a, b) => b.relevanceScore - a.relevanceScore) // Sort by relevance
+      .slice(0, 15); // Show more results for better discovery
+  };
+
+  // Calculate similarity between two strings (simple Levenshtein-based)
+  const calculateSimilarity = (str1, str2) => {
+    if (str1 === str2) return 1.0;
+    if (str1.length === 0) return 0.0;
+    if (str2.length === 0) return 0.0;
+    
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    // Simple similarity calculation
+    let matches = 0;
+    for (let i = 0; i < shorter.length; i++) {
+      if (longer.includes(shorter[i])) matches++;
+    }
+    
+    return matches / longer.length;
+  };
+
+  // Calculate relevance score for ranking results
+  const calculateRelevanceScore = (searchTerm, item, searchWords) => {
+    let score = 0;
     const nameLower = item.item_name.toLowerCase();
     const codeLower = (item.item_code || '').toLowerCase();
+    const categoryLower = (item.category || '').toLowerCase();
     
-    const nameMatch = nameLower.includes(searchLower);
-    const codeMatch = codeLower.includes(searchLower);
+    // Exact matches get highest score
+    if (nameLower.includes(searchTerm)) score += 100;
+    if (codeLower.includes(searchTerm)) score += 90;
     
+    // Word matches
+    searchWords.forEach(word => {
+      if (nameLower.includes(word)) score += 50;
+      if (codeLower.includes(word)) score += 45;
+      if (categoryLower.includes(word)) score += 30;
+      
+      // Bonus for word start matches
+      const itemWords = nameLower.split(/\s+/);
+      itemWords.forEach(itemWord => {
+        if (itemWord.startsWith(word)) score += 20;
+      });
+    });
+    
+    // Acronym bonus
+    const itemAcronym = nameLower.split(/\s+/).map(w => w.charAt(0)).join('');
+    if (itemAcronym.includes(searchTerm) || itemAcronym.startsWith(searchTerm)) {
+      score += 40;
+    }
+    
+    // Length bonus (shorter names get slight preference)
+    score += Math.max(0, 20 - nameLower.length / 10);
+    
+    return score;
+  };
 
+  // Use advanced search for filtered results
+  const filteredCatalogItems = advancedSearch(searchTerm, catalogItems);
+
+  // Helper function to show what matched in search results
+  const getSearchHighlights = (item, searchTerm) => {
+    const searchWords = searchTerm.toLowerCase().split(/\s+/);
+    const nameLower = item.item_name.toLowerCase();
+    const codeLower = (item.item_code || '').toLowerCase();
+    const categoryLower = (item.category || '').toLowerCase();
     
-    return nameMatch || codeMatch;
-  }).slice(0, 10); // Limit to 10 results
+    const highlights = [];
+    
+    searchWords.forEach(word => {
+      if (nameLower.includes(word)) highlights.push(`"${word}" in name`);
+      if (codeLower.includes(word)) highlights.push(`"${word}" in code`);
+      if (categoryLower.includes(word)) highlights.push(`"${word}" in category`);
+      
+      // Check for acronym matches
+      const itemAcronym = nameLower.split(/\s+/).map(w => w.charAt(0)).join('');
+      if (itemAcronym.includes(word) || itemAcronym.startsWith(word)) {
+        highlights.push(`"${word}" as acronym`);
+      }
+      
+      // Check for partial word matches
+      const itemWords = nameLower.split(/\s+/);
+      itemWords.forEach(itemWord => {
+        if (itemWord.startsWith(word)) {
+          highlights.push(`"${word}" starts "${itemWord}"`);
+        }
+      });
+    });
+    
+    return highlights.slice(0, 3).join(', '); // Limit to 3 highlights
+  };
 
 
 
@@ -452,7 +588,7 @@ const ResultsTable = () => {
                         placeholder="Search item name..."
                       />
                       
-                      {/* Search Dropdown */}
+                      {/* Enhanced Search Dropdown */}
                       {showSearchDropdown[index] && filteredCatalogItems.length > 0 && (
                         <div className="search-dropdown absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                           {filteredCatalogItems.map((catalogItem, catIndex) => (
@@ -461,10 +597,23 @@ const ResultsTable = () => {
                               className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                               onClick={() => handleItemSelection(index, catalogItem)}
                             >
-                              <div className="font-medium text-gray-900">{catalogItem.item_name}</div>
+                              <div className="font-medium text-gray-900 flex items-center justify-between">
+                                <span>{catalogItem.item_name}</span>
+                                {catalogItem.relevanceScore && (
+                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                    Score: {catalogItem.relevanceScore}
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-gray-500 text-xs">
                                 Code: {catalogItem.item_code} | Category: {catalogItem.category}
                               </div>
+                              {/* Show search term highlights */}
+                              {searchTerm.trim() && (
+                                <div className="text-xs text-green-600 mt-1">
+                                  Matches: {getSearchHighlights(catalogItem, searchTerm)}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
