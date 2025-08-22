@@ -173,13 +173,6 @@ const FileUpload = () => {
     setManualItems(manualItems.filter((_, i) => i !== index));
   };
 
-  // Load catalog items when manual mode is selected
-  useEffect(() => {
-    if (inputMode === 'manual' && catalogItems.length === 0) {
-      loadCatalogItems();
-    }
-  }, [inputMode, catalogItems.length, loadCatalogItems]);
-
   // Load catalog items from the backend
   const loadCatalogItems = useCallback(async () => {
     try {
@@ -192,6 +185,13 @@ const FileUpload = () => {
       setCatalogItems([]);
     }
   }, []);
+
+  // Load catalog items when manual mode is selected
+  useEffect(() => {
+    if (inputMode === 'manual' && catalogItems.length === 0) {
+      loadCatalogItems();
+    }
+  }, [inputMode, catalogItems.length, loadCatalogItems]);
 
   // Filter catalog items for search
   const filterCatalogItems = useCallback((searchTerm) => {
